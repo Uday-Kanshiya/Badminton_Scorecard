@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "483228839672",
+    "project_id": "badminton-scorecard-37371",
+    "storage_bucket": "badminton-scorecard-37371.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:483228839672:android:f67bb4d5a0fbcb599a550d",
+        "android_client_info": {
+          "package_name": "com.badminton.scorecard"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB0p1Go5ddk-uLi6rKgQ7MrphLImvT4RSM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

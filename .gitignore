@@ -1,0 +1,41 @@
+﻿# Built application files
+*.apk
+*.aar
+*.ap_
+*.aab
+
+# Keep apk folder APKs for direct download
+!apk/*.apk
+
+# Files for the ART/Dalvik VM
+*.dex
+
+# Java class files
+*.class
+
+# Generated files
+bin/
+gen/
+out/
+build/
+app/build/
+.gradle/
+
+# Local configuration file
+local.properties
+
+# Proguard
+proguard/
+
+# Log Files
+*.log
+
+# Android Studio & IntelliJ IDEA
+*.iml
+.idea/
+captures/
+.navigation/
+
+# OS specific files
+.DS_Store
+Thumbs.db
