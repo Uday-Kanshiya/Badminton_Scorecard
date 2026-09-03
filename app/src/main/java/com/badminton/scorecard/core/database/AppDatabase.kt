@@ -22,7 +22,7 @@ import com.badminton.scorecard.core.database.entity.SetEntity
         SetEntity::class,
         MatchEventEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = true
 )
 @TypeConverters(Converters::class)

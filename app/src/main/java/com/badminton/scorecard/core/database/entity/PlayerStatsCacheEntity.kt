@@ -29,6 +29,7 @@ data class PlayerStatsCacheEntity(
     val totalServeRallies: Int = 0,
     val totalPointsOnReturn: Int = 0,
     val totalReturnRallies: Int = 0,
+    val individualPointsScored: Int = 0,
     val lastUpdated: Long = System.currentTimeMillis()
 ) {
     val totalPointsOnOwnServe: Int get() = totalPointsOnServe

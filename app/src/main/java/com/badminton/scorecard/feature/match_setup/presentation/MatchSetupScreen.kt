@@ -45,54 +45,34 @@ fun MatchSetupScreen(
 
     Scaffold(
         topBar = {
-            Surface(
-                color = MaterialTheme.colorScheme.surface,
-                tonalElevation = 2.dp,
-                shadowElevation = 1.dp,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .statusBarsPadding()
-                        .padding(horizontal = 12.dp, vertical = 10.dp)
-                ) {
+            CenterAlignedTopAppBar(
+                title = {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        IconButton(onClick = onNavigateBack) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Back",
-                                tint = MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-                        Box(
-                            modifier = Modifier
-                                .size(42.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(MaterialTheme.colorScheme.primaryContainer),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text("🏸", fontSize = 22.sp)
-                        }
-                        Column {
-                            Text(
-                                text = "New Match Setup",
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "Configure format, rules & lineup",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+                        Text("🏸", fontSize = 20.sp)
+                        Text(
+                            text = "New Match Setup",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
                     }
-                }
-            }
+                },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                )
+            )
         }
     ) { padding ->
         Column(
@@ -259,6 +239,59 @@ fun MatchSetupScreen(
                                 label = { Text("Team B") },
                                 modifier = Modifier.weight(1f)
                             )
+                        }
+                    }
+
+                    // Service Rotation
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("Service Rotation", style = MaterialTheme.typography.bodyMedium)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            FilterChip(
+                                selected = uiState.serviceRotationEnabled,
+                                onClick = { viewModel.onServiceRotationChanged(true) },
+                                label = { Text("Official Rules \uD83D\uDD04") },
+                                modifier = Modifier.weight(1f)
+                            )
+                            FilterChip(
+                                selected = !uiState.serviceRotationEnabled,
+                                onClick = { viewModel.onServiceRotationChanged(false) },
+                                label = { Text("No Rotation ⏹") },
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+
+                    // Point Attribution (Doubles only)
+                    if (uiState.matchType == MatchType.DOUBLES) {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("Point Attribution", style = MaterialTheme.typography.bodyMedium)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                FilterChip(
+                                    selected = !uiState.playerPointAttribution,
+                                    onClick = { viewModel.onPlayerPointAttributionChanged(false) },
+                                    label = { Text("Team Points \uD83D\uDC65") },
+                                    modifier = Modifier.weight(1f)
+                                )
+                                FilterChip(
+                                    selected = uiState.playerPointAttribution,
+                                    onClick = { viewModel.onPlayerPointAttributionChanged(true) },
+                                    label = { Text("Player Points \uD83D\uDC64") },
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                            if (uiState.playerPointAttribution) {
+                                Text(
+                                    text = "Each point will be attributed to the player who made the winning shot.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
                     }
 

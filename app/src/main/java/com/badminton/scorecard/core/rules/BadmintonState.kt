@@ -77,7 +77,8 @@ data class BadmintonLiveState(
     val isMatchOver: Boolean = false,
     val matchWinner: TeamSide? = null,
     val rallyNumber: Int = 0,
-    val isSidesSwapped: Boolean = false
+    val isSidesSwapped: Boolean = false,
+    val isServiceRotationEnabled: Boolean = true
 ) {
     /**
      * The score of the current ongoing set.
@@ -110,16 +111,18 @@ data class BadmintonLiveState(
      * Generates standard BWF umpire call text matching professional tournament displays.
      */
     val umpireCall: String get() {
+        val serverLabel = if (isServiceRotationEnabled) serverPlayer.name 
+            else if (servingTeam == TeamSide.TEAM_A) "Team 1" else "Team 2"
         val servingScore = if (servingTeam == TeamSide.TEAM_A) teamA.score else teamB.score
         val receivingScore = if (servingTeam == TeamSide.TEAM_A) teamB.score else teamA.score
         return when {
-            isMatchOver -> "${if (matchWinner == TeamSide.TEAM_A) "Team A" else "Team B"} wins the match!"
+            isMatchOver -> "${if (matchWinner == TeamSide.TEAM_A) "Team 1" else "Team 2"} wins the match!"
             isSetOver -> "End of set $currentSetNumber."
-            servingScore == 0 && receivingScore == 0 -> "${serverPlayer.name} to serve. Love all. Play."
-            isDeuce -> "${serverPlayer.name} to serve. Deuce. $servingScore all."
-            servingScore == receivingScore -> "${serverPlayer.name} to serve. $servingScore all."
-            servingScore >= targetPoints - 1 && servingScore > receivingScore -> "${serverPlayer.name} to serve. Game point."
-            else -> "${serverPlayer.name} to serve. $servingScore - $receivingScore."
+            servingScore == 0 && receivingScore == 0 -> "$serverLabel to serve. Love all. Play."
+            isDeuce -> "$serverLabel to serve. Deuce. $servingScore all."
+            servingScore == receivingScore -> "$serverLabel to serve. $servingScore all."
+            servingScore >= targetPoints - 1 && servingScore > receivingScore -> "$serverLabel to serve. Game point."
+            else -> "$serverLabel to serve. $servingScore - $receivingScore."
         }
     }
 }

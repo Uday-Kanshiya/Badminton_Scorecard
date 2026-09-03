@@ -13,9 +13,9 @@ val ShuttlecockGoldLight = Color(0xFFFFD54F)
 val ShuttlecockGoldDark = Color(0xFFFFA000)
 
 // Background & Surface (Light Theme - Soft Mint Green, Sky Blue, Gold, Silver palette)
-val LightBackground = Color(0xFFEFF5F2)        // Soft light mint-sage canvas (replaces harsh white)
-val LightSurface = Color(0xFFF7FAF8)           // Soft ivory/pale mint surface
-val LightSurfaceVariant = Color(0xFFE8F2EC)    // Light mint-silver surface variant
+val LightBackground = Color(0xFFE3F2FD)        // (sky blue canvas)
+val LightSurface = Color(0xFFEBF5FF)           // (lighter sky surface)
+val LightSurfaceVariant = Color(0xFFD6EAFF)    // (sky blue cards)
 val LightOutline = Color(0xFF90A4AE)           // Slate-silver outline
 val LightOutlineVariant = Color(0xFFCFD8DC)    // Sleek silver border
 val CreamWhite = Color(0xFFF5F7FA)
@@ -31,9 +31,11 @@ val LightSkyBorder = Color(0xFF81D4FA)         // Sky blue border
 val LightGoldBorder = Color(0xFFFFD54F)        // Gold accent border
 val LightSilverBorder = Color(0xFFB0BEC5)      // Sleek silver border
 
-val DarkBackground = Color(0xFF121212)
-val DarkSurface = Color(0xFF1E1E1E)
-val DarkSurfaceVariant = Color(0xFF2C2C2C)
+val DarkBackground = Color(0xFF0E1117)
+val DarkSurface = Color(0xFF262730)
+val DarkSurfaceVariant = Color(0xFF31333F)
+val DarkOutline = Color(0xFF4A4D5E)
+val DarkOutlineVariant = Color(0xFF3B3E4D)
 val CourtGreenContainer = Color(0xFFE8F5E9)
 val OnCourtGreenContainer = Color(0xFF0F3E16)
 val ShuttlecockGoldContainer = Color(0xFFFFF8E1)

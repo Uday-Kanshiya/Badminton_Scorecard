@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -36,6 +37,7 @@ import com.badminton.scorecard.core.designsystem.components.StatCard
 import com.badminton.scorecard.core.designsystem.components.TimePeriodSelector
 import com.badminton.scorecard.core.designsystem.theme.*
 import kotlinx.coroutines.launch
+import java.util.Locale
 import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -55,8 +57,8 @@ fun PlayerProfileScreen(
     Scaffold(
         snackbarHost = { androidx.compose.material3.SnackbarHost(snackbarHostState) },
         topBar = {
-            TopAppBar(
-                title = { Text("Player Profile") },
+            CenterAlignedTopAppBar(
+                title = { Text("Player Profile", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -80,37 +82,43 @@ fun PlayerProfileScreen(
                         IconButton(onClick = {
                             coroutineScope.launch {
                                 try {
-                                    val bestPartner = uiState.partnerships.maxByOrNull { it.winPercentage }
-                                    val partnerWinPct = bestPartner?.winPercentage?.roundToInt() ?: 0
-                                    val partnerName = bestPartner?.let {
-                                        if (it.player1Id == player.id) it.player2Name else it.player1Name
-                                    }
+                                     val bestPartner = uiState.partnershipContributions.maxByOrNull { it.winPercentage }
+                                     val partnerWinPct = bestPartner?.winPercentage?.roundToInt() ?: 0
+                                     val partnerName = bestPartner?.partnerName
+                                     val playerPts = bestPartner?.playerPoints ?: 0
+                                     val partnerPts = bestPartner?.partnerPoints ?: 0
 
-                                    val bitmap = com.badminton.scorecard.core.sharing.ScorecardImageGenerator.generatePlayerStatsCard(
-                                        context = context,
-                                        player = player,
-                                        stats = stats,
-                                        bestPartnerName = partnerName,
-                                        partnerWinRate = partnerWinPct
-                                    )
-                                    val uri = com.badminton.scorecard.core.sharing.ShareUtils.saveBitmapToGallery(
-                                        context,
-                                        bitmap,
-                                        "player_${player.id}_analytics"
-                                    )
-                                    if (uri != null) {
-                                        snackbarHostState.showSnackbar("✅ Analytics card saved to Photos / Gallery!")
-                                    } else {
-                                        snackbarHostState.showSnackbar("Saved to device storage.")
-                                    }
-                                } catch (e: Exception) {
-                                    e.printStackTrace()
-                                    snackbarHostState.showSnackbar("Save failed: ${e.message}")
-                                }
-                            }
-                        }) {
-                            Icon(Icons.Default.Download, contentDescription = "Save Stats Image")
-                        }
+                                     val bitmap = com.badminton.scorecard.core.sharing.ScorecardImageGenerator.generatePlayerStatsCard(
+                                         context = context,
+                                         player = player,
+                                         stats = stats,
+                                         bestPartnerName = partnerName,
+                                         partnerWinRate = partnerWinPct,
+                                         doublesPoints = uiState.doublesStats.totalDoublesPoints,
+                                         doublesMatches = uiState.doublesStats.doublesMatchesCount,
+                                         doublesAvgPoints = uiState.doublesStats.avgPointsPerMatch,
+                                         doublesTeamSharePct = uiState.doublesStats.shareOfTeamPointsPct,
+                                         partnerPlayerPoints = playerPts,
+                                         partnerPartnerPoints = partnerPts
+                                     )
+                                     val uri = com.badminton.scorecard.core.sharing.ShareUtils.saveBitmapToGallery(
+                                         context,
+                                         bitmap,
+                                         "player_${player.id}_analytics"
+                                     )
+                                     if (uri != null) {
+                                         snackbarHostState.showSnackbar("✅ Analytics card saved to Photos / Gallery!")
+                                     } else {
+                                         snackbarHostState.showSnackbar("Saved to device storage.")
+                                     }
+                                 } catch (e: Exception) {
+                                     e.printStackTrace()
+                                     snackbarHostState.showSnackbar("Save failed: ${e.message}")
+                                 }
+                             }
+                         }) {
+                             Icon(Icons.Default.Download, contentDescription = "Save Stats Image")
+                         }
                     }
                 }
             )
@@ -123,18 +131,24 @@ fun PlayerProfileScreen(
                         val stats = uiState.stats
                         coroutineScope.launch {
                             try {
-                                val bestPartner = uiState.partnerships.maxByOrNull { it.winPercentage }
+                                val bestPartner = uiState.partnershipContributions.maxByOrNull { it.winPercentage }
                                 val partnerWinPct = bestPartner?.winPercentage?.roundToInt() ?: 0
-                                val partnerName = bestPartner?.let {
-                                    if (it.player1Id == player.id) it.player2Name else it.player1Name
-                                }
+                                val partnerName = bestPartner?.partnerName
+                                val playerPts = bestPartner?.playerPoints ?: 0
+                                val partnerPts = bestPartner?.partnerPoints ?: 0
 
                                 val bitmap = com.badminton.scorecard.core.sharing.ScorecardImageGenerator.generatePlayerStatsCard(
                                     context = context,
                                     player = player,
                                     stats = stats,
                                     bestPartnerName = partnerName,
-                                    partnerWinRate = partnerWinPct
+                                    partnerWinRate = partnerWinPct,
+                                    doublesPoints = uiState.doublesStats.totalDoublesPoints,
+                                    doublesMatches = uiState.doublesStats.doublesMatchesCount,
+                                    doublesAvgPoints = uiState.doublesStats.avgPointsPerMatch,
+                                    doublesTeamSharePct = uiState.doublesStats.shareOfTeamPointsPct,
+                                    partnerPlayerPoints = playerPts,
+                                    partnerPartnerPoints = partnerPts
                                 )
                                 val uri = com.badminton.scorecard.core.sharing.ShareUtils.saveBitmapAndGetUri(
                                     context,
@@ -158,6 +172,9 @@ fun PlayerProfileScreen(
                                     appendLine("Player: ${player.name}${if (!player.nickname.isNullOrBlank()) " (${player.nickname})" else ""}")
                                     appendLine("Matches: $played | Won: $won | Lost: $lost")
                                     appendLine("Win Rate: $winRate%")
+                                    if (uiState.doublesStats.totalDoublesPoints > 0) {
+                                        appendLine("Doubles Points Scored: ${uiState.doublesStats.totalDoublesPoints} pts (Avg ${String.format(Locale.getDefault(), "%.1f", uiState.doublesStats.avgPointsPerMatch)}/game)")
+                                    }
                                 }
 
                                 val sendIntent = android.content.Intent().apply {
@@ -365,12 +382,79 @@ fun PlayerProfileScreen(
 
                     item {
                         Text(
+                            text = "Doubles Scoring Impact",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
+                        )
+                        HorizontalDivider(modifier = Modifier.padding(bottom = 8.dp))
+                    }
+
+                    item {
+                        val doublesStats = uiState.doublesStats
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(14.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (isDark) MaterialTheme.colorScheme.surface else LightSkyContainer
+                            ),
+                            border = BorderStroke(1.dp, if (isDark) MaterialTheme.colorScheme.outlineVariant else LightSkyBorder)
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    StatCard(
+                                        label = "Doubles Pts",
+                                        value = doublesStats.totalDoublesPoints.toString(),
+                                        containerColor = if (isDark) MaterialTheme.colorScheme.surfaceVariant else Color.White,
+                                        borderColor = if (isDark) MaterialTheme.colorScheme.outlineVariant else LightSkyBorder,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    StatCard(
+                                        label = "Pts / Game",
+                                        value = String.format(Locale.getDefault(), "%.1f", doublesStats.avgPointsPerMatch),
+                                        containerColor = if (isDark) MaterialTheme.colorScheme.surfaceVariant else Color.White,
+                                        borderColor = if (isDark) MaterialTheme.colorScheme.outlineVariant else LightSkyBorder,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    StatCard(
+                                        label = "Team Share",
+                                        value = "${doublesStats.shareOfTeamPointsPct.roundToInt()}%",
+                                        containerColor = if (isDark) MaterialTheme.colorScheme.surfaceVariant else Color.White,
+                                        borderColor = if (isDark) MaterialTheme.colorScheme.outlineVariant else LightSkyBorder,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                }
+
+                                if (doublesStats.recentMatchPoints.isNotEmpty()) {
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        text = "Individual Points in Recent Doubles Matches",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                    DoublesRecentPointsBarChart(entries = doublesStats.recentMatchPoints, isDark = isDark)
+                                } else {
+                                    Text(
+                                        text = "Matches played with player point attribution will display individual winning shots here.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    item {
+                        Text(
                             text = "Best Partners",
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
                         )
-                        Divider(modifier = Modifier.padding(bottom = 8.dp))
+                        HorizontalDivider(modifier = Modifier.padding(bottom = 8.dp))
                     }
 
                     if (uiState.partnerships.isEmpty()) {
@@ -382,45 +466,149 @@ fun PlayerProfileScreen(
                             )
                         }
                     } else {
-                        items(uiState.partnerships) { partnership ->
+                        val medals = listOf("🥇", "🥈", "🥉")
+                        val partnershipsList = uiState.partnershipContributions.ifEmpty { 
+                            uiState.partnerships.map { p ->
+                                val partnerId = if (p.player1Id == player.id) p.player2Id else p.player1Id
+                                val partnerName = if (p.player1Id == player.id) p.player2Name else p.player1Name
+                                com.badminton.scorecard.feature.player.data.PartnershipContribution(
+                                    partnerId = partnerId,
+                                    partnerName = partnerName,
+                                    matchesPlayed = p.matchesPlayed,
+                                    matchesWon = p.matchesWon,
+                                    winPercentage = p.winPercentage,
+                                    playerPoints = 0,
+                                    partnerPoints = 0,
+                                    totalPairPoints = 0,
+                                    playerContributionPct = 50f
+                                )
+                            }
+                        }
+
+                        itemsIndexed(partnershipsList) { index, partnership ->
+                            val medal = medals.getOrElse(index) { "•" }
+                            val winPct = partnership.winPercentage.roundToInt()
                             Card(
                                 modifier = Modifier.fillMaxWidth(),
-                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                                shape = RoundedCornerShape(12.dp),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
                             ) {
-                                Row(
+                                Column(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .padding(16.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
+                                    verticalArrangement = Arrangement.spacedBy(10.dp)
                                 ) {
-                                    val partnerName = if (partnership.player1Id == player.id) partnership.player2Name else partnership.player1Name
-                                    Text(
-                                        text = partnerName,
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-                                    Column(horizontalAlignment = Alignment.End) {
-                                        Text(
-                                            text = "${partnership.winPercentage.roundToInt()}%",
-                                            style = MaterialTheme.typography.titleMedium,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.primary
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                        ) {
+                                            Text(text = medal, fontSize = 16.sp)
+                                            Text(
+                                                text = partnership.partnerName,
+                                                style = MaterialTheme.typography.titleMedium,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                        ) {
+                                            Text(
+                                                text = "$winPct%",
+                                                style = MaterialTheme.typography.titleMedium,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.primary
+                                            )
+                                            Text(
+                                                text = "(${partnership.matchesPlayed} matches)",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                    }
+
+                                    // Win Rate Progress Bar
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(6.dp)
+                                            .clip(RoundedCornerShape(3.dp))
+                                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f))
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxWidth(if (winPct > 0) (winPct / 100f).coerceIn(0.03f, 1f) else 0f)
+                                                .height(6.dp)
+                                                .clip(RoundedCornerShape(3.dp))
+                                                .background(MaterialTheme.colorScheme.primary)
                                         )
-                                        Text(
-                                            text = "${partnership.matchesPlayed} matches",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
+                                    }
+
+                                    // Teammate point contribution as a pair
+                                    if (partnership.totalPairPoints > 0) {
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clip(RoundedCornerShape(8.dp))
+                                                .background(if (isDark) MaterialTheme.colorScheme.surfaceVariant else LightSkyContainer)
+                                                .padding(10.dp),
+                                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceBetween
+                                            ) {
+                                                Text(
+                                                    text = "You: ${partnership.playerPoints} pts (${partnership.playerContributionPct.roundToInt()}%)",
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    color = Color(0xFF6C63FF)
+                                                )
+                                                Text(
+                                                    text = "${partnership.partnerName}: ${partnership.partnerPoints} pts (${(100 - partnership.playerContributionPct).roundToInt()}%)",
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    color = if (isDark) Color(0xFF00E5FF) else Color(0xFF00838F)
+                                                )
+                                            }
+
+                                            // Dual-colored split contribution bar
+                                            Row(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .height(8.dp)
+                                                    .clip(RoundedCornerShape(4.dp))
+                                            ) {
+                                                val playerWeight = (partnership.playerContributionPct / 100f).coerceIn(0.05f, 0.95f)
+                                                Box(
+                                                    modifier = Modifier
+                                                        .weight(playerWeight)
+                                                        .fillMaxHeight()
+                                                        .background(Color(0xFF6C63FF))
+                                                )
+                                                Box(
+                                                    modifier = Modifier
+                                                        .weight(1f - playerWeight)
+                                                        .fillMaxHeight()
+                                                        .background(if (isDark) Color(0xFF00E5FF) else Color(0xFF00838F))
+                                                )
+                                            }
+                                        }
                                     }
                                 }
                             }
                         }
                     }
-                    
+
                     item {
-                        PartnershipBarChartSection(partnerships = uiState.partnerships, currentPlayerId = player.id)
-                        Spacer(modifier = Modifier.height(80.dp)) // Space for FAB
+                        Spacer(modifier = Modifier.height(80.dp))
                     }
                 }
             }
@@ -776,7 +964,67 @@ fun PartnershipBarChartSection(partnerships: List<com.badminton.scorecard.core.d
                                 .background(Color(0xFF1E88E5))
                         )
                     }
-                }
+            }
+        }
+    }
+}
+}
+
+@Composable
+fun DoublesRecentPointsBarChart(
+    entries: List<com.badminton.scorecard.feature.player.data.DoublesMatchPointEntry>,
+    isDark: Boolean
+) {
+    val maxPoints = (entries.maxOfOrNull { it.pointsScored } ?: 1).coerceAtLeast(1)
+    val chronological = remember(entries) { entries.reversed() }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(115.dp)
+            .padding(top = 8.dp),
+        horizontalArrangement = Arrangement.SpaceEvenly,
+        verticalAlignment = Alignment.Bottom
+    ) {
+        chronological.forEach { entry ->
+            val fillFraction = (entry.pointsScored.toFloat() / maxPoints).coerceIn(0.15f, 1f)
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Bottom,
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .padding(horizontal = 4.dp)
+            ) {
+                Text(
+                    text = entry.pointsScored.toString(),
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = if (isDark) Color(0xFF00E5FF) else MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(0.55f)
+                        .fillMaxHeight(fillFraction)
+                        .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    Color(0xFF6C63FF),
+                                    if (isDark) Color(0xFF00E5FF) else Color(0xFF0288D1)
+                                )
+                            )
+                        )
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = entry.opponentLabel.take(6),
+                    style = MaterialTheme.typography.labelSmall,
+                    fontSize = 9.sp,
+                    maxLines = 1,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }

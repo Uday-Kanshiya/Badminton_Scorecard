@@ -4,11 +4,12 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.getValue
@@ -43,13 +44,14 @@ class MainActivity : ComponentActivity() {
                 val currentDestination = navBackStackEntry?.destination
                 val currentRoute = currentDestination?.route
 
-                // Hide bottom bar on specific screens
+                // Hide bottom bar on specific screens (match in progress, summary, setup)
                 val showBottomBar = currentRoute != null && 
                         !currentRoute.contains(LiveMatchRoute::class.qualifiedName ?: "") &&
                         !currentRoute.contains(MatchSummaryRoute::class.qualifiedName ?: "") &&
-                        !currentRoute.contains("SettingsRoute")
+                        !currentRoute.contains(NewMatchRoute::class.qualifiedName ?: "")
 
                 Scaffold(
+                    contentWindowInsets = WindowInsets(0, 0, 0, 0),
                     bottomBar = {
                         if (showBottomBar) {
                             NavigationBar(
@@ -57,10 +59,10 @@ class MainActivity : ComponentActivity() {
                             ) {
                                 val items = listOf(
                                     BottomNavItem("Home", Icons.Default.Home, HomeRoute),
-                                    BottomNavItem("Players", Icons.Default.Person, PlayersRoute),
-                                    BottomNavItem("New Match", Icons.Default.Add, NewMatchRoute),
                                     BottomNavItem("History", Icons.AutoMirrored.Default.List, HistoryRoute),
-                                    BottomNavItem("Stats", Icons.Default.Star, StatsRoute)
+                                    BottomNavItem("Players", Icons.Default.Person, PlayersRoute),
+                                    BottomNavItem("Stats", Icons.Default.Star, StatsRoute),
+                                    BottomNavItem("Settings", Icons.Default.Settings, SettingsRoute)
                                 )
                                 
                                 items.forEach { item ->
@@ -70,7 +72,8 @@ class MainActivity : ComponentActivity() {
                                         (item.route == PlayersRoute && it.route?.contains("PlayersRoute") == true) ||
                                         (item.route == NewMatchRoute && it.route?.contains("NewMatchRoute") == true) ||
                                         (item.route == HistoryRoute && it.route?.contains("HistoryRoute") == true) ||
-                                        (item.route == StatsRoute && it.route?.contains("StatsRoute") == true)
+                                        (item.route == StatsRoute && it.route?.contains("StatsRoute") == true) ||
+                                        (item.route == SettingsRoute && it.route?.contains("SettingsRoute") == true)
                                     } == true
 
                                     NavigationBarItem(

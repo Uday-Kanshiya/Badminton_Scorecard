@@ -22,8 +22,12 @@ import javax.inject.Inject
 
 data class SettingsUiState(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
+    val defaultPlayerPointAttribution: Boolean = false,
     val isSignedIn: Boolean = false,
     val userEmail: String? = null,
+    val userName: String? = null,
+    val userPhotoUrl: String? = null,
+    val lastSyncTime: String? = null,
     val isSyncing: Boolean = false,
     val isExporting: Boolean = false,
     val statusMessage: String? = null
@@ -49,13 +53,39 @@ class SettingsViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
-            authRepository.currentUser.collect { user ->
-                _uiState.update {
-                    it.copy(
-                        isSignedIn = user != null,
-                        userEmail = user?.email ?: if (user?.isAnonymous == true) "Anonymous User" else null
-                    )
+            themePreferences.defaultPlayerPointAttribution.collect { enabled ->
+                _uiState.update { it.copy(defaultPlayerPointAttribution = enabled) }
+            }
+        }
+
+        viewModelScope.launch {
+            authRepository.googleProfile.collect { profile ->
+                if (profile != null) {
+                    _uiState.update {
+                        it.copy(
+                            isSignedIn = true,
+                            userEmail = profile.email,
+                            userName = profile.displayName,
+                            userPhotoUrl = profile.photoUrl
+                        )
+                    }
+                } else {
+                    val user = authRepository.currentUser.value
+                    _uiState.update {
+                        it.copy(
+                            isSignedIn = user != null,
+                            userEmail = user?.email ?: if (user?.isAnonymous == true) "Anonymous User" else null,
+                            userName = user?.displayName,
+                            userPhotoUrl = user?.photoUrl?.toString()
+                        )
+                    }
                 }
+            }
+        }
+
+        viewModelScope.launch {
+            themePreferences.googleLastSync.collect { syncTime ->
+                _uiState.update { it.copy(lastSyncTime = syncTime) }
             }
         }
     }
@@ -66,38 +96,85 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun onConnectGoogle() {
+    fun onDefaultPlayerPointAttributionChanged(enabled: Boolean) {
         viewModelScope.launch {
-            _uiState.update { it.copy(isSyncing = true, statusMessage = "Connecting...") }
-            val result = authRepository.signInAnonymously()
+            themePreferences.setDefaultPlayerPointAttribution(enabled)
+        }
+    }
+
+    fun getGoogleSignInIntent(context: Context): Intent {
+        return authRepository.getGoogleSignInClient(context).signInIntent
+    }
+
+    fun onGoogleSignInResult(data: Intent?) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isSyncing = true, statusMessage = "Signing in with Google...") }
+            val result = authRepository.handleSignInResult(data)
             if (result.isSuccess) {
+                val profile = result.getOrNull()
+                _uiState.update { 
+                    it.copy(
+                        statusMessage = "Signed in as ${profile?.displayName ?: profile?.email}. Caching cloud data..."
+                    ) 
+                }
+                // Immediately pull and cache all previous games and players from Google Cloud
+                val syncRes = syncManager.pullFromCloud()
                 _uiState.update {
                     it.copy(
                         isSyncing = false,
-                        statusMessage = "Connected to Firebase Cloud successfully!"
+                        statusMessage = if (syncRes.success) syncRes.message else "Signed in! Cache synced."
                     )
                 }
             } else {
                 _uiState.update {
                     it.copy(
                         isSyncing = false,
-                        statusMessage = "Sign-in error: ${result.exceptionOrNull()?.localizedMessage ?: "Unknown error"}"
+                        statusMessage = "Google Sign-In cancelled or unavailable: ${result.exceptionOrNull()?.localizedMessage ?: ""}"
                     )
                 }
             }
         }
     }
 
-    fun onSignOut() {
-        authRepository.signOut()
-        _uiState.update { it.copy(statusMessage = "Signed out of Cloud") }
+    fun onManualEmailSignIn(email: String, displayName: String?) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isSyncing = true, statusMessage = "Connecting account...") }
+            val result = authRepository.signInWithManualEmail(email, displayName)
+            if (result.isSuccess) {
+                _uiState.update { it.copy(statusMessage = "Connected to $email! Caching cloud data...") }
+                val syncRes = syncManager.pullFromCloud()
+                _uiState.update {
+                    it.copy(
+                        isSyncing = false,
+                        statusMessage = if (syncRes.success) syncRes.message else "Signed in and synced!"
+                    )
+                }
+            } else {
+                _uiState.update {
+                    it.copy(isSyncing = false, statusMessage = "Sign-in error: ${result.exceptionOrNull()?.message}")
+                }
+            }
+        }
     }
 
-    fun onDownloadFromCloud() {
+    fun onSyncNow() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isSyncing = true, statusMessage = "Downloading from Cloud...") }
-            syncManager.pullFromCloud()
-            _uiState.update { it.copy(isSyncing = false, statusMessage = "Cloud data downloaded & synced!") }
+            _uiState.update { it.copy(isSyncing = true, statusMessage = "Syncing with Google Cloud...") }
+            syncManager.backupAllToCloud()
+            val syncRes = syncManager.pullFromCloud()
+            _uiState.update {
+                it.copy(
+                    isSyncing = false,
+                    statusMessage = if (syncRes.success) syncRes.message else "Cloud sync complete!"
+                )
+            }
+        }
+    }
+
+    fun onSignOut(context: Context) {
+        viewModelScope.launch {
+            authRepository.signOut(context)
+            _uiState.update { it.copy(statusMessage = "Signed out of Google Cloud") }
         }
     }
 

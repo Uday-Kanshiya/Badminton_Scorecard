@@ -30,6 +30,8 @@ data class MatchSetupUiState(
     val bestOfSets: Int = 1,
     val firstServe: TeamSide = TeamSide.TEAM_A,
     val isSkunkRuleActive: Boolean = true,
+    val serviceRotationEnabled: Boolean = true,
+    val playerPointAttribution: Boolean = false,
     val isFormValid: Boolean = false,
     val isCreatingMatch: Boolean = false,
     val createdMatchId: Long? = null
@@ -38,7 +40,8 @@ data class MatchSetupUiState(
 @HiltViewModel
 class MatchSetupViewModel @Inject constructor(
     private val playerDao: PlayerDao,
-    private val matchDao: MatchDao
+    private val matchDao: MatchDao,
+    private val themePreferences: com.badminton.scorecard.core.preferences.ThemePreferences
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(MatchSetupUiState())
@@ -46,6 +49,11 @@ class MatchSetupViewModel @Inject constructor(
 
     init {
         loadPlayers()
+        viewModelScope.launch {
+            themePreferences.defaultPlayerPointAttribution.collect { default ->
+                _uiState.update { it.copy(playerPointAttribution = default) }
+            }
+        }
     }
 
     private fun loadPlayers() {
@@ -132,6 +140,14 @@ class MatchSetupViewModel @Inject constructor(
         _uiState.update { it.copy(firstServe = team) }
     }
 
+    fun onServiceRotationChanged(enabled: Boolean) {
+        _uiState.update { it.copy(serviceRotationEnabled = enabled) }
+    }
+
+    fun onPlayerPointAttributionChanged(enabled: Boolean) {
+        _uiState.update { it.copy(playerPointAttribution = enabled) }
+    }
+
     fun onStartMatch() {
         val state = _uiState.value
         if (!state.isFormValid) return
@@ -146,6 +162,8 @@ class MatchSetupViewModel @Inject constructor(
                     targetPoints = state.targetPoints,
                     bestOfSets = state.bestOfSets,
                     skunkRuleEnabled = state.isSkunkRuleActive,
+                    serviceRotationEnabled = state.serviceRotationEnabled,
+                    playerPointAttribution = state.playerPointAttribution,
                     status = "IN_PROGRESS"
                 )
                 val matchId = matchDao.insertMatch(match)

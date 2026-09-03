@@ -29,5 +29,6 @@ data class MatchEventEntity(
     val serverCourt: String, // "RIGHT" or "LEFT"
     val teamAScoreAfter: Int,
     val teamBScoreAfter: Int,
+    val scoringPlayerId: Long? = null,
     val timestamp: Long = System.currentTimeMillis()
 )

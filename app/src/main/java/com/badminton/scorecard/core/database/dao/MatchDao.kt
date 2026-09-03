@@ -2,6 +2,7 @@ package com.badminton.scorecard.core.database.dao
 
 import androidx.room.Dao
 import androidx.room.Insert
+import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
 import com.badminton.scorecard.core.database.entity.MatchEntity
@@ -12,7 +13,7 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface MatchDao {
-    @Insert
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertMatch(match: MatchEntity): Long
 
     @Update
@@ -35,10 +36,10 @@ interface MatchDao {
     """)
     fun getMatchesByPlayerIdCompleted(playerId: Long): Flow<List<MatchEntity>>
 
-    @Insert
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertMatchPlayers(vararg crossRefs: MatchPlayerCrossRef)
 
-    @Insert
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertSet(set: SetEntity): Long
 
     @Update
@@ -47,7 +48,7 @@ interface MatchDao {
     @Query("SELECT * FROM sets WHERE matchId = :matchId ORDER BY setNumber ASC")
     fun getSetsForMatch(matchId: Long): Flow<List<SetEntity>>
 
-    @Insert
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertEvent(event: MatchEventEntity): Long
 
     @Query("SELECT * FROM match_events WHERE setId = :setId ORDER BY timestamp ASC, rallyNumber ASC")

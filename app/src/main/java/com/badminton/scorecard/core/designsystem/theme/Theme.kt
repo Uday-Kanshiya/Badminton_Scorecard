@@ -31,6 +31,8 @@ private val DarkColorScheme = darkColorScheme(
     surfaceVariant = DarkSurfaceVariant,
     onBackground = PureWhite,
     onSurface = PureWhite,
+    outline = DarkOutline,
+    outlineVariant = DarkOutlineVariant,
     error = ErrorRed
 )
 
@@ -83,7 +85,7 @@ fun BadmintonScorecardTheme(
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            window.statusBarColor = (if (isDark) colorScheme.background else colorScheme.surface).toArgb()
+            window.statusBarColor = colorScheme.background.toArgb()
             WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !isDark
         }
     }

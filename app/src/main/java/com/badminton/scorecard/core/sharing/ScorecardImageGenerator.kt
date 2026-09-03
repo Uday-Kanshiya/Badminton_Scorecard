@@ -464,9 +464,15 @@ object ScorecardImageGenerator {
         player: PlayerEntity,
         stats: PlayerStatsCacheEntity?,
         bestPartnerName: String? = null,
-        partnerWinRate: Int = 0
+        partnerWinRate: Int = 0,
+        doublesPoints: Int = 0,
+        doublesMatches: Int = 0,
+        doublesAvgPoints: Float = 0f,
+        doublesTeamSharePct: Float = 0f,
+        partnerPlayerPoints: Int = 0,
+        partnerPartnerPoints: Int = 0
     ): Bitmap {
-        val cardHeight = 1750
+        val cardHeight = 2050
         val bitmap = Bitmap.createBitmap(WIDTH, cardHeight, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
 
@@ -783,9 +789,47 @@ object ScorecardImageGenerator {
         drawMetricBar("Points Won on Partner's Serve", partnerServePoints, totalAttribution, 1375f, "#AB47BC")
         drawMetricBar("Points Won on Return (Opponent Serve)", opponentServePoints, totalAttribution, 1440f, "#00E676")
 
-        // 6. Doubles Partner Spotlight (if available)
+        // 6. Doubles Scoring Impact Card
+        val doublesCardRect = RectF(40f, 1505f, (WIDTH - 40).toFloat(), 1705f)
+        paint.color = Color.parseColor("#1E2430")
+        canvas.drawRoundRect(doublesCardRect, 20f, 20f, paint)
+
+        textPaint.textAlign = Paint.Align.LEFT
+        textPaint.color = Color.parseColor("#00E5FF")
+        textPaint.textSize = 28f
+        textPaint.isFakeBoldText = true
+        canvas.drawText("⚡ DOUBLES SCORING IMPACT", 70f, 1550f, textPaint)
+
+        // 3 Stat Badges across the card
+        val badgeY = 1575f
+        val badgeH = 105f
+        val badgeSpacing = 15f
+        val badgeW = (WIDTH - 80f - badgeSpacing * 2f) / 3f
+
+        fun drawDoublesStatTile(x: Float, label: String, value: String, accentColor: String) {
+            val tileRect = RectF(x, badgeY, x + badgeW, badgeY + badgeH)
+            paint.color = Color.parseColor("#262E3D")
+            canvas.drawRoundRect(tileRect, 14f, 14f, paint)
+
+            textPaint.textAlign = Paint.Align.CENTER
+            textPaint.color = Color.parseColor(accentColor)
+            textPaint.textSize = 34f
+            textPaint.isFakeBoldText = true
+            canvas.drawText(value, x + badgeW / 2f, badgeY + 48f, textPaint)
+
+            textPaint.color = Color.parseColor("#90A4AE")
+            textPaint.textSize = 20f
+            textPaint.isFakeBoldText = false
+            canvas.drawText(label, x + badgeW / 2f, badgeY + 86f, textPaint)
+        }
+
+        drawDoublesStatTile(40f, "Doubles Pts", "$doublesPoints", "#6C63FF")
+        drawDoublesStatTile(40f + badgeW + badgeSpacing, "Pts / Match", String.format(Locale.getDefault(), "%.1f", doublesAvgPoints), "#00E5FF")
+        drawDoublesStatTile(40f + (badgeW + badgeSpacing) * 2f, "Team Share", "${doublesTeamSharePct.roundToInt()}%", "#00E676")
+
+        // 7. Doubles Partner Spotlight (if available)
         if (!bestPartnerName.isNullOrBlank()) {
-            val partnerRect = RectF(40f, 1505f, (WIDTH - 40).toFloat(), 1655f)
+            val partnerRect = RectF(40f, 1730f, (WIDTH - 40).toFloat(), 1960f)
             paint.color = Color.parseColor("#1B2E24")
             canvas.drawRoundRect(partnerRect, 20f, 20f, paint)
 
@@ -799,17 +843,46 @@ object ScorecardImageGenerator {
             textPaint.color = Color.parseColor("#A5D6A7")
             textPaint.textSize = 24f
             textPaint.isFakeBoldText = false
-            canvas.drawText("BEST DOUBLES PARTNER 🥇", 70f, 1555f, textPaint)
+            canvas.drawText("BEST DOUBLES PARTNER 🥇", 70f, 1775f, textPaint)
 
             textPaint.color = Color.WHITE
             textPaint.textSize = 34f
             textPaint.isFakeBoldText = true
-            canvas.drawText(bestPartnerName, 70f, 1610f, textPaint)
+            canvas.drawText(bestPartnerName, 70f, 1825f, textPaint)
 
             textPaint.textAlign = Paint.Align.RIGHT
             textPaint.color = Color.parseColor("#FFD54F")
             textPaint.textSize = 34f
-            canvas.drawText("$partnerWinRate% Win Rate", (WIDTH - 70).toFloat(), 1610f, textPaint)
+            canvas.drawText("$partnerWinRate% Win Rate", (WIDTH - 70).toFloat(), 1825f, textPaint)
+
+            // Pair point contribution split if points exist
+            val totalPairPts = partnerPlayerPoints + partnerPartnerPoints
+            if (totalPairPts > 0) {
+                val playerPct = ((partnerPlayerPoints.toFloat() / totalPairPts) * 100).roundToInt()
+                val partnerPct = 100 - playerPct
+
+                textPaint.textAlign = Paint.Align.LEFT
+                textPaint.color = Color.parseColor("#90CAF9")
+                textPaint.textSize = 22f
+                textPaint.isFakeBoldText = false
+                canvas.drawText("Pair Impact: You $partnerPlayerPoints pts ($playerPct%)  •  $bestPartnerName $partnerPartnerPoints pts ($partnerPct%)", 70f, 1880f, textPaint)
+
+                // Split progress bar
+                val barRect = RectF(70f, 1905f, (WIDTH - 70).toFloat(), 1925f)
+                paint.color = Color.parseColor("#37474F")
+                canvas.drawRoundRect(barRect, 8f, 8f, paint)
+
+                val playerRatio = (partnerPlayerPoints.toFloat() / totalPairPts).coerceIn(0.05f, 0.95f)
+                val splitX = 70f + (WIDTH - 140f) * playerRatio
+
+                val playerBar = RectF(70f, 1905f, splitX, 1925f)
+                paint.color = Color.parseColor("#6C63FF")
+                canvas.drawRoundRect(playerBar, 8f, 8f, paint)
+
+                val partnerBar = RectF(splitX, 1905f, (WIDTH - 70).toFloat(), 1925f)
+                paint.color = Color.parseColor("#00E5FF")
+                canvas.drawRoundRect(partnerBar, 8f, 8f, paint)
+            }
         }
 
         // Footer Branding

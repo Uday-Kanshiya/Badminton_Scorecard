@@ -14,5 +14,7 @@ data class MatchEntity(
     val winnerTeam: String? = null, // "TEAM_A" or "TEAM_B"
     val startedAt: Long = System.currentTimeMillis(),
     val endedAt: Long? = null,
-    val firebaseSyncId: String? = null
+    val firebaseSyncId: String? = null,
+    val serviceRotationEnabled: Boolean = true,
+    val playerPointAttribution: Boolean = false
 )

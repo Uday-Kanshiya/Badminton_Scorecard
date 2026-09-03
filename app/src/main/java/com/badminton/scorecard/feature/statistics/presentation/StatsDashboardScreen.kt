@@ -19,14 +19,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -52,6 +45,7 @@ import com.badminton.scorecard.feature.statistics.data.LeaderboardEntry
 import com.badminton.scorecard.feature.statistics.data.MatchCountByDate
 import com.badminton.scorecard.feature.statistics.data.PartnershipWinRate
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StatsDashboardScreen(
     onNavigateToPartnerships: () -> Unit,
@@ -67,23 +61,41 @@ fun StatsDashboardScreen(
         return
     }
 
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(24.dp)
-    ) {
-        item {
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = "Statistics",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold
+    Scaffold(
+        topBar = {
+            CenterAlignedTopAppBar(
+                title = {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text("📊", fontSize = 20.sp)
+                        Text(
+                            text = "Analytics & Stats",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                )
             )
-            Spacer(modifier = Modifier.height(16.dp))
-            TimePeriodSelector(
-                selectedPeriod = uiState.selectedPeriod,
-                onPeriodSelected = viewModel::onPeriodSelected
+        }
+    ) { paddingValues ->
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(24.dp)
+        ) {
+            item {
+                Spacer(modifier = Modifier.height(8.dp))
+                TimePeriodSelector(
+                    selectedPeriod = uiState.selectedPeriod,
+                    onPeriodSelected = viewModel::onPeriodSelected
             )
         }
 
@@ -196,6 +208,7 @@ fun StatsDashboardScreen(
             }
         }
     }
+}
 }
 
 @Composable

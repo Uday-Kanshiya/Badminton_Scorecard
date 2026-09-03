@@ -26,7 +26,8 @@ class BadmintonRulesEngine {
         bestOfSets: Int,
         teamAPlayers: List<PlayerInfo>,  // 1 for singles, 2 for doubles
         teamBPlayers: List<PlayerInfo>,
-        firstServingTeam: TeamSide
+        firstServingTeam: TeamSide,
+        serviceRotationEnabled: Boolean = true
     ): BadmintonLiveState {
         val teamA = TeamCourtState(
             team = TeamSide.TEAM_A,
@@ -57,7 +58,8 @@ class BadmintonRulesEngine {
             servingTeam = firstServingTeam,
             serverPlayer = servingTeam.player1, // Right court player serves first (score is 0 = even)
             receiverPlayer = receivingTeam.player1, // Right court player receives
-            serverCourt = CourtSide.RIGHT
+            serverCourt = CourtSide.RIGHT,
+            isServiceRotationEnabled = serviceRotationEnabled
         )
     }
     
@@ -114,50 +116,69 @@ class BadmintonRulesEngine {
         
         val servingTeamScored = scoringTeam == currentState.servingTeam
         
-        if (servingTeamScored) {
-            // SCENARIO 1: Serving side won the rally
-            // Same server keeps serving, serving team swaps courts (doubles)
-            if (scoringTeam == TeamSide.TEAM_A) {
-                newTeamA = if (currentState.matchType == MatchType.DOUBLES) {
-                    currentState.teamA.copy(score = newTeamAScore).swapPositions()
-                } else {
-                    currentState.teamA.copy(score = newTeamAScore)
-                }
-                newTeamB = currentState.teamB.copy(score = newTeamBScore)
-            } else {
-                newTeamA = currentState.teamA.copy(score = newTeamAScore)
-                newTeamB = if (currentState.matchType == MatchType.DOUBLES) {
-                    currentState.teamB.copy(score = newTeamBScore).swapPositions()
-                } else {
-                    currentState.teamB.copy(score = newTeamBScore)
-                }
-            }
-            newServingTeam = currentState.servingTeam
-            newServerPlayer = currentState.serverPlayer
-            
-            // Server moves to the court matching their team's score parity
-            val servingScore = if (scoringTeam == TeamSide.TEAM_A) newTeamAScore else newTeamBScore
-            newServerCourt = if (servingScore % 2 == 0) CourtSide.RIGHT else CourtSide.LEFT
-            
-            // Receiver is the opponent on the same diagonal court
-            val receivingTeamState = if (scoringTeam == TeamSide.TEAM_A) newTeamB else newTeamA
-            newReceiverPlayer = receivingTeamState.playerAt(newServerCourt)
-        } else {
-            // SCENARIO 2: Receiving side won the rally (service changes)
-            // Nobody swaps courts!
+        if (!currentState.isServiceRotationEnabled) {
+            // No rotation mode: just update scores, toggle serve if needed
             newTeamA = currentState.teamA.copy(score = newTeamAScore)
             newTeamB = currentState.teamB.copy(score = newTeamBScore)
-            newServingTeam = scoringTeam
             
-            // The player on the scoring team in the correct parity court becomes server
-            val newServingScore = if (scoringTeam == TeamSide.TEAM_A) newTeamAScore else newTeamBScore
-            newServerCourt = if (newServingScore % 2 == 0) CourtSide.RIGHT else CourtSide.LEFT
+            if (servingTeamScored) {
+                newServingTeam = currentState.servingTeam
+            } else {
+                newServingTeam = scoringTeam
+            }
             
-            val newServingTeamState = if (scoringTeam == TeamSide.TEAM_A) newTeamA else newTeamB
-            newServerPlayer = newServingTeamState.playerAt(newServerCourt)
-            
-            val newReceivingTeamState = if (scoringTeam == TeamSide.TEAM_A) newTeamB else newTeamA
-            newReceiverPlayer = newReceivingTeamState.playerAt(newServerCourt)
+            // Use player1 as nominal server/receiver
+            val servingTeamState = if (newServingTeam == TeamSide.TEAM_A) newTeamA else newTeamB
+            val receivingTeamState = if (newServingTeam == TeamSide.TEAM_A) newTeamB else newTeamA
+            newServerPlayer = servingTeamState.player1
+            newReceiverPlayer = receivingTeamState.player1
+            newServerCourt = if ((if (newServingTeam == TeamSide.TEAM_A) newTeamAScore else newTeamBScore) % 2 == 0) CourtSide.RIGHT else CourtSide.LEFT
+        } else {
+            if (servingTeamScored) {
+                // SCENARIO 1: Serving side won the rally
+                // Same server keeps serving, serving team swaps courts (doubles)
+                if (scoringTeam == TeamSide.TEAM_A) {
+                    newTeamA = if (currentState.matchType == MatchType.DOUBLES) {
+                        currentState.teamA.copy(score = newTeamAScore).swapPositions()
+                    } else {
+                        currentState.teamA.copy(score = newTeamAScore)
+                    }
+                    newTeamB = currentState.teamB.copy(score = newTeamBScore)
+                } else {
+                    newTeamA = currentState.teamA.copy(score = newTeamAScore)
+                    newTeamB = if (currentState.matchType == MatchType.DOUBLES) {
+                        currentState.teamB.copy(score = newTeamBScore).swapPositions()
+                    } else {
+                        currentState.teamB.copy(score = newTeamBScore)
+                    }
+                }
+                newServingTeam = currentState.servingTeam
+                newServerPlayer = currentState.serverPlayer
+                
+                // Server moves to the court matching their team's score parity
+                val servingScore = if (scoringTeam == TeamSide.TEAM_A) newTeamAScore else newTeamBScore
+                newServerCourt = if (servingScore % 2 == 0) CourtSide.RIGHT else CourtSide.LEFT
+                
+                // Receiver is the opponent on the same diagonal court
+                val receivingTeamState = if (scoringTeam == TeamSide.TEAM_A) newTeamB else newTeamA
+                newReceiverPlayer = receivingTeamState.playerAt(newServerCourt)
+            } else {
+                // SCENARIO 2: Receiving side won the rally (service changes)
+                // Nobody swaps courts!
+                newTeamA = currentState.teamA.copy(score = newTeamAScore)
+                newTeamB = currentState.teamB.copy(score = newTeamBScore)
+                newServingTeam = scoringTeam
+                
+                // The player on the scoring team in the correct parity court becomes server
+                val newServingScore = if (scoringTeam == TeamSide.TEAM_A) newTeamAScore else newTeamBScore
+                newServerCourt = if (newServingScore % 2 == 0) CourtSide.RIGHT else CourtSide.LEFT
+                
+                val newServingTeamState = if (scoringTeam == TeamSide.TEAM_A) newTeamA else newTeamB
+                newServerPlayer = newServingTeamState.playerAt(newServerCourt)
+                
+                val newReceivingTeamState = if (scoringTeam == TeamSide.TEAM_A) newTeamB else newTeamA
+                newReceiverPlayer = newReceivingTeamState.playerAt(newServerCourt)
+            }
         }
         
         // Check match completion

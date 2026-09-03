@@ -3,15 +3,9 @@ package com.badminton.scorecard.navigation
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.List
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Analytics
-import androidx.compose.material.icons.filled.Group
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -21,7 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -30,10 +24,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.badminton.scorecard.core.database.dao.MatchDao
 import com.badminton.scorecard.core.database.dao.PlayerDao
-import com.badminton.scorecard.core.designsystem.components.MatchResultCard
-import com.badminton.scorecard.core.designsystem.theme.CourtGreen
-import com.badminton.scorecard.core.designsystem.theme.CourtGreenDark
-import com.badminton.scorecard.core.designsystem.theme.ShuttlecockGold
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -114,231 +104,197 @@ fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val recentMatches by viewModel.recentMatches.collectAsState()
+    val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
 
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp)
+    Box(
+        modifier = Modifier.fillMaxSize()
     ) {
-        // App Header Banner
-        item {
-            Card(
+        // Court photo in the background - dark or light theme
+        val bgDrawable = if (isDark) com.badminton.scorecard.R.drawable.court_bg_dark else com.badminton.scorecard.R.drawable.court_bg_light
+        androidx.compose.foundation.Image(
+            painter = androidx.compose.ui.res.painterResource(id = bgDrawable),
+            contentDescription = null,
+            contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+            modifier = Modifier.fillMaxSize()
+        )
+
+        // Gradient overlay for readability and contrast across both court themes
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        colors = if (isDark) {
+                            listOf(
+                                Color.Black.copy(alpha = 0.45f),
+                                Color.Black.copy(alpha = 0.2f),
+                                Color.Black.copy(alpha = 0.8f)
+                            )
+                        } else {
+                            listOf(
+                                Color.Black.copy(alpha = 0.4f),
+                                Color.Black.copy(alpha = 0.15f),
+                                Color.Black.copy(alpha = 0.7f)
+                            )
+                        }
+                    )
+                )
+        )
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .statusBarsPadding()
+                .padding(horizontal = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Spacer(modifier = Modifier.height(48.dp))
+
+            // Logo
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(Color(0xFF2A2A3E).copy(alpha = 0.85f))
+                    .padding(horizontal = 20.dp, vertical = 12.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text("\uD83C\uDFF8", fontSize = 28.sp)  // Shuttlecock
+                    Column {
+                        Text(
+                            text = "badminton",
+                            color = Color.White,
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            lineHeight = 24.sp
+                        )
+                        Text(
+                            text = "SCORER",
+                            color = Color(0xFF6C63FF),
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 3.sp
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            // New Match Button
+            Button(
+                onClick = onNavigateToNewMatch,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(20.dp)),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(
-                            Brush.horizontalGradient(
-                                colors = listOf(CourtGreenDark, CourtGreen)
-                            )
-                        )
-                        .padding(20.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(10.dp),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text(text = "🏸", fontSize = 36.sp)
-                            Column {
-                                Text(
-                                    text = "Badminton Scorecard",
-                                    fontSize = 20.sp,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    color = Color.White
-                                )
-                                Text(
-                                    text = "Live scoring • Serve rotation • Analytics",
-                                    fontSize = 12.sp,
-                                    color = ShuttlecockGold,
-                                    fontWeight = FontWeight.Medium
-                                )
-                            }
-                        }
-
-                        IconButton(onClick = onNavigateToSettings) {
-                            Icon(
-                                androidx.compose.material.icons.Icons.Default.Settings,
-                                contentDescription = "Settings",
-                                tint = Color.White
-                            )
-                        }
-                    }
-                }
-            }
-        }
-
-        // 2x2 Feature Cards Grid
-        item {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    HomeCard(
-                        title = "New Match",
-                        subtitle = "Start scoring",
-                        icon = Icons.Default.Add,
-                        gradientColors = listOf(Color(0xFF2E7D32), Color(0xFF43A047)),
-                        onClick = onNavigateToNewMatch,
-                        modifier = Modifier.weight(1f)
-                    )
-                    HomeCard(
-                        title = "Players",
-                        subtitle = "Roster & profiles",
-                        icon = Icons.Default.Group,
-                        gradientColors = listOf(Color(0xFF0277BD), Color(0xFF0288D1)),
-                        onClick = onNavigateToPlayers,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    HomeCard(
-                        title = "Match History",
-                        subtitle = "Review past games",
-                        icon = Icons.AutoMirrored.Default.List,
-                        gradientColors = listOf(Color(0xFFF57F17), Color(0xFFFFA000)),
-                        onClick = onNavigateToHistory,
-                        modifier = Modifier.weight(1f)
-                    )
-                    HomeCard(
-                        title = "Analytics",
-                        subtitle = "Stats & charts",
-                        icon = Icons.Default.Analytics,
-                        gradientColors = listOf(Color(0xFF455A64), Color(0xFF78909C)),
-                        onClick = onNavigateToStats,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-            }
-        }
-
-        // Recent Matches Section
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                    .height(56.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF6C63FF)
+                ),
+                elevation = ButtonDefaults.buttonElevation(defaultElevation = 6.dp)
             ) {
                 Text(
-                    text = "Recent Matches",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onBackground
+                    text = "New Match",
+                    color = Color.White,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold
                 )
-                if (recentMatches.isNotEmpty()) {
-                    TextButton(onClick = onNavigateToHistory) {
-                        Text("View all", color = MaterialTheme.colorScheme.primary)
+                Spacer(modifier = Modifier.width(8.dp))
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                    contentDescription = null,
+                    tint = Color.White
+                )
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Recent Matches Section
+            if (recentMatches.isNotEmpty()) {
+                Text(
+                    text = "Recent Matches",
+                    color = Color.White.copy(alpha = 0.7f),
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp)
+                )
+
+                recentMatches.forEach { match ->
+                    val isTeamAWinner = match.winnerTeam.equals("TEAM_A", ignoreCase = true)
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp)
+                            .clickable { onNavigateToMatchDetail(match.matchId) },
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (isDark) Color.White.copy(alpha = 0.1f) else Color.Black.copy(alpha = 0.45f)
+                        ),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, if (isDark) Color.White.copy(alpha = 0.15f) else Color.White.copy(alpha = 0.25f))
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 14.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = match.teamANames.joinToString(" & ").ifBlank { "Team A" },
+                                    color = if (isTeamAWinner) Color(0xFF4CAF50) else Color.White.copy(alpha = 0.8f),
+                                    fontSize = 13.sp,
+                                    fontWeight = if (isTeamAWinner) FontWeight.Bold else FontWeight.Normal,
+                                    maxLines = 1
+                                )
+                                Text(
+                                    text = match.teamBNames.joinToString(" & ").ifBlank { "Team B" },
+                                    color = if (!isTeamAWinner) Color(0xFF4CAF50) else Color.White.copy(alpha = 0.8f),
+                                    fontSize = 13.sp,
+                                    fontWeight = if (!isTeamAWinner) FontWeight.Bold else FontWeight.Normal,
+                                    maxLines = 1
+                                )
+                            }
+                            Text(
+                                text = "${match.teamAScore} - ${match.teamBScore}",
+                                color = Color.White,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
                 }
-            }
-        }
-
-        if (recentMatches.isEmpty()) {
-            item {
+            } else {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (isDark) Color.White.copy(alpha = 0.08f) else Color.Black.copy(alpha = 0.4f)
+                    ),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, if (isDark) Color.White.copy(alpha = 0.12f) else Color.White.copy(alpha = 0.2f))
                 ) {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(24.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                            .padding(20.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text(text = "🏸", fontSize = 32.sp)
+                        Text("\uD83C\uDFF8", fontSize = 28.sp)
+                        Spacer(modifier = Modifier.height(6.dp))
                         Text(
-                            text = "No matches played yet",
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        Text(
-                            text = "Tap 'New Match' above to start your first game!",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            text = "No matches yet",
+                            color = Color.White.copy(alpha = 0.6f),
+                            fontSize = 14.sp
                         )
                     }
                 }
             }
-        } else {
-            items(recentMatches) { match ->
-                MatchResultCard(
-                    matchType = match.matchType,
-                    teamANames = match.teamANames,
-                    teamBNames = match.teamBNames,
-                    teamAScore = match.teamAScore,
-                    teamBScore = match.teamBScore,
-                    winnerTeam = match.winnerTeam,
-                    date = match.date,
-                    onClick = { onNavigateToMatchDetail(match.matchId) }
-                )
-            }
-        }
-    }
-}
 
-@Composable
-fun HomeCard(
-    title: String,
-    subtitle: String,
-    icon: ImageVector,
-    gradientColors: List<Color>,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier
-            .height(130.dp)
-            .clickable { onClick() },
-        shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Brush.verticalGradient(gradientColors))
-                .padding(14.dp)
-        ) {
-            Column(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.SpaceBetween
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = title,
-                    tint = Color.White,
-                    modifier = Modifier.size(32.dp)
-                )
-                Column {
-                    Text(
-                        text = title,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp,
-                        color = Color.White
-                    )
-                    Text(
-                        text = subtitle,
-                        fontSize = 11.sp,
-                        color = Color.White.copy(alpha = 0.8f)
-                    )
-                }
-            }
+            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 }

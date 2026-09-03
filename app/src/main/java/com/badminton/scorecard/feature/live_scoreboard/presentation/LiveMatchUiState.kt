@@ -17,7 +17,10 @@ data class LiveMatchUiState(
     val isAnnouncerVisible: Boolean = true,
     val showEndMatchDialog: Boolean = false,
     val isMatchComplete: Boolean = false,
-    val isSkunkVictory: Boolean = false
+    val isSkunkVictory: Boolean = false,
+    val playerPointAttribution: Boolean = false,
+    val showScoringPlayerDialog: Boolean = false,
+    val pendingScoringTeam: com.badminton.scorecard.core.rules.TeamSide? = null
 )
 
 sealed class LiveMatchEvent {

@@ -1,8 +1,13 @@
 package com.badminton.scorecard.feature.settings.presentation
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -11,6 +16,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -31,6 +38,16 @@ fun SettingsScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
 
+    val googleSignInLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        viewModel.onGoogleSignInResult(result.data)
+    }
+
+    var showManualEmailDialog by remember { mutableStateOf(false) }
+    var manualEmailInput by remember { mutableStateOf("") }
+    var manualNameInput by remember { mutableStateOf("") }
+
     LaunchedEffect(uiState.statusMessage) {
         uiState.statusMessage?.let {
             snackbarHostState.showSnackbar(it)
@@ -41,8 +58,8 @@ fun SettingsScreen(
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
-            TopAppBar(
-                title = { Text("Settings & Data") },
+            CenterAlignedTopAppBar(
+                title = { Text("Settings & Data", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -110,7 +127,53 @@ fun SettingsScreen(
                 }
             }
 
-            // 2. Google Account & Cloud Sync Card (Mint Green Theme in Light Mode)
+            // Match Defaults Card
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = MaterialTheme.shapes.medium,
+                colors = CardDefaults.cardColors(
+                    containerColor = if (isDark) MaterialTheme.colorScheme.surface else LightGoldContainer
+                ),
+                border = BorderStroke(1.dp, if (isDark) MaterialTheme.colorScheme.outlineVariant else LightGoldBorder),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(Icons.Default.SportsScore, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        Text("Match Defaults", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    }
+
+                    Text(
+                        text = "Set default options for new matches. These can be changed per-match in the setup screen.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Text("Default Point Attribution (Doubles)", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        FilterChip(
+                            selected = !uiState.defaultPlayerPointAttribution,
+                            onClick = { viewModel.onDefaultPlayerPointAttributionChanged(false) },
+                            label = { Text("Team Points 👥") },
+                            modifier = Modifier.weight(1f)
+                        )
+                        FilterChip(
+                            selected = uiState.defaultPlayerPointAttribution,
+                            onClick = { viewModel.onDefaultPlayerPointAttributionChanged(true) },
+                            label = { Text("Player Points 👤") },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+            }
+
+            // 2. Google Account & Cloud Save Card (Mint Green Theme in Light Mode)
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = MaterialTheme.shapes.medium,
@@ -120,57 +183,158 @@ fun SettingsScreen(
                 border = BorderStroke(1.dp, if (isDark) MaterialTheme.colorScheme.outlineVariant else LightMintBorder),
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     Row(
+                        modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Icon(Icons.Default.Cloud, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                        Text("Google Cloud Backup", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(Icons.Default.Cloud, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                            Text("Google Play & Cloud Save", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        }
+                        if (uiState.isSignedIn) {
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = Color(0xFF00E676).copy(alpha = 0.15f),
+                                border = BorderStroke(1.dp, Color(0xFF00E676))
+                            ) {
+                                Text(
+                                    text = "Cloud Save Active 🟢",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isDark) Color(0xFF69F0AE) else Color(0xFF1B5E20),
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                )
+                            }
+                        }
                     }
 
-                    Text(
-                        text = if (uiState.isSignedIn) "Connected: ${uiState.userEmail ?: "Active Account"}" else "Connect to Google Cloud to securely back up match history and player statistics across devices.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-
                     if (!uiState.isSignedIn) {
+                        Text(
+                            text = "Sign in with your Google account to automatically back up and cache your matches, set history, and player stats across devices.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+
                         Button(
-                            onClick = viewModel::onConnectGoogle,
+                            onClick = {
+                                try {
+                                    val intent = viewModel.getGoogleSignInIntent(context)
+                                    googleSignInLauncher.launch(intent)
+                                } catch (e: Exception) {
+                                    showManualEmailDialog = true
+                                }
+                            },
                             modifier = Modifier.fillMaxWidth(),
-                            enabled = !uiState.isSyncing
+                            enabled = !uiState.isSyncing,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary
+                            )
                         ) {
                             if (uiState.isSyncing) {
-                                CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                                CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onPrimary)
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text("Connecting...")
+                                Text("Signing in & caching data...")
                             } else {
                                 Icon(Icons.Default.AccountCircle, contentDescription = null)
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text("Connect to Google")
+                                Text("Sign in with Google", fontWeight = FontWeight.Bold)
                             }
                         }
+
+                        TextButton(
+                            onClick = { showManualEmailDialog = true },
+                            modifier = Modifier.align(Alignment.CenterHorizontally)
+                        ) {
+                            Text("Or connect with Gmail address manually", style = MaterialTheme.typography.bodySmall)
+                        }
                     } else {
+                        // User Profile Info
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(if (isDark) MaterialTheme.colorScheme.surfaceVariant else Color.White)
+                                .padding(12.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.primary),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = (uiState.userName?.firstOrNull() ?: uiState.userEmail?.firstOrNull() ?: 'G').uppercase(),
+                                    color = MaterialTheme.colorScheme.onPrimary,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 18.sp
+                                )
+                            }
+
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = uiState.userName ?: "Google Player",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = uiState.userEmail ?: "",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
+                        // Last sync info
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Last synced: ${uiState.lastSyncTime ?: "Just now"}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                text = "Auto-cached",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
                             Button(
-                                onClick = viewModel::onDownloadFromCloud,
+                                onClick = viewModel::onSyncNow,
                                 modifier = Modifier.weight(1f),
                                 enabled = !uiState.isSyncing
                             ) {
-                                Icon(Icons.Default.CloudDownload, contentDescription = null)
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("Sync Now")
+                                if (uiState.isSyncing) {
+                                    CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onPrimary)
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("Syncing...")
+                                } else {
+                                    Icon(Icons.Default.CloudSync, contentDescription = null)
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("Sync Now")
+                                }
                             }
 
                             OutlinedButton(
-                                onClick = viewModel::onSignOut,
+                                onClick = { viewModel.onSignOut(context) },
                                 modifier = Modifier.weight(1f)
                             ) {
-                                Text("Disconnect")
+                                Text("Sign Out")
                             }
                         }
                     }
@@ -231,10 +395,65 @@ fun SettingsScreen(
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text("Badminton Scorecard Pro", fontWeight = FontWeight.Bold)
-                    Text("Version 1.2.0 • Offline-first with Cloud Sync", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Badminton Scorer", fontWeight = FontWeight.Bold)
+                    Text("Version 2.0.0 • Offline-first with Cloud Sync", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
+    }
+
+    if (showManualEmailDialog) {
+        AlertDialog(
+            onDismissRequest = { showManualEmailDialog = false },
+            title = { 
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Icon(Icons.Default.AccountCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                    Text("Connect Google Account") 
+                }
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        "Enter your Gmail address to associate and restore your cloud match history and player stats across devices.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    OutlinedTextField(
+                        value = manualEmailInput,
+                        onValueChange = { manualEmailInput = it },
+                        label = { Text("Gmail Address") },
+                        placeholder = { Text("example@gmail.com") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = manualNameInput,
+                        onValueChange = { manualNameInput = it },
+                        label = { Text("Display Name (Optional)") },
+                        placeholder = { Text("Your Name") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (manualEmailInput.isNotBlank()) {
+                            viewModel.onManualEmailSignIn(manualEmailInput.trim(), manualNameInput.trim().ifEmpty { null })
+                            showManualEmailDialog = false
+                        }
+                    },
+                    enabled = manualEmailInput.isNotBlank() && manualEmailInput.contains("@")
+                ) {
+                    Text("Connect & Cache")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showManualEmailDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }

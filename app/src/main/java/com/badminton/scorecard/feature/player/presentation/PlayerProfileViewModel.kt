@@ -20,6 +20,9 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 
+import com.badminton.scorecard.feature.player.data.DoublesScoringStats
+import com.badminton.scorecard.feature.player.data.PartnershipContribution
+
 @HiltViewModel
 class PlayerProfileViewModel @Inject constructor(
     private val playerRepository: PlayerRepository,
@@ -35,6 +38,8 @@ class PlayerProfileViewModel @Inject constructor(
         val partnerships: List<PartnershipWinRate> = emptyList(),
         val selectedPeriod: TimePeriod = TimePeriod.ALL_TIME,
         val periodStats: DateRangeStats? = null,
+        val doublesStats: DoublesScoringStats = DoublesScoringStats(),
+        val partnershipContributions: List<PartnershipContribution> = emptyList(),
         val isLoading: Boolean = true
     )
 
@@ -57,7 +62,9 @@ class PlayerProfileViewModel @Inject constructor(
         playerRepository.getServeStatsForPlayer(playerId),
         playerRepository.getPartnershipStatsForPlayer(playerId),
         _selectedPeriod,
-        periodStatsFlow
+        periodStatsFlow,
+        playerRepository.getDoublesScoringStatsForPlayer(playerId),
+        playerRepository.getPartnershipContributionsForPlayer(playerId)
     ) { flows: Array<Any?> ->
         val player = flows[0] as PlayerEntity?
         val stats = flows[1] as PlayerStatsCacheEntity?
@@ -66,6 +73,9 @@ class PlayerProfileViewModel @Inject constructor(
         val partnerships = flows[3] as List<PartnershipWinRate>
         val selectedPeriod = flows[4] as TimePeriod
         val periodStats = flows[5] as DateRangeStats?
+        val doublesStats = flows[6] as DoublesScoringStats? ?: DoublesScoringStats()
+        @Suppress("UNCHECKED_CAST")
+        val partnershipContributions = flows[7] as List<PartnershipContribution>? ?: emptyList()
 
         PlayerProfileUiState(
             player = player,
@@ -74,6 +84,8 @@ class PlayerProfileViewModel @Inject constructor(
             partnerships = partnerships,
             selectedPeriod = selectedPeriod,
             periodStats = periodStats,
+            doublesStats = doublesStats,
+            partnershipContributions = partnershipContributions,
             isLoading = player == null
         )
     }.stateIn(

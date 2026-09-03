@@ -71,6 +71,54 @@ fun LiveMatchScreen(
         )
     }
 
+    // Player Point Attribution Dialog
+    if (uiState.showScoringPlayerDialog && uiState.pendingScoringTeam != null) {
+        val scoringTeamNames = if (uiState.pendingScoringTeam == TeamSide.TEAM_A) uiState.teamAPlayerNames else uiState.teamBPlayerNames
+        val scoringTeamState = uiState.gameState?.getTeam(uiState.pendingScoringTeam!!)
+        
+        AlertDialog(
+            onDismissRequest = viewModel::onScoringPlayerDialogDismissed,
+            title = { 
+                Text(
+                    "Who made the winning shot?",
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                ) 
+            },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    scoringTeamState?.let { team ->
+                        Button(
+                            onClick = { viewModel.onScoringPlayerSelected(team.player1) },
+                            modifier = Modifier.fillMaxWidth().height(48.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6C63FF))
+                        ) {
+                            Text(team.player1.name, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        }
+                        team.player2?.let { p2 ->
+                            Button(
+                                onClick = { viewModel.onScoringPlayerSelected(p2) },
+                                modifier = Modifier.fillMaxWidth().height(48.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6C63FF))
+                            ) {
+                                Text(p2.name, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = viewModel::onScoringPlayerDialogDismissed) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
     // Match Menu Dialog
     if (showMenuSheet) {
         AlertDialog(
@@ -316,7 +364,7 @@ fun LiveMatchScreen(
             ) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text(
-                        text = "+1  ${topTeamNames.firstOrNull() ?: "Top Team"}",
+                        text = "+1  ${topTeamNames.joinToString(" and ").ifEmpty { "Top Team" }}",
                         color = Color.White,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold
@@ -341,141 +389,277 @@ fun LiveMatchScreen(
                         .border(2.dp, courtLineColor)
                 ) {
                     Column(modifier = Modifier.fillMaxSize()) {
-                        // Top Half (Top Team - Facing DOWN towards the net)
-                        // Perspective: When looking down at the net, your RIGHT court is on screen LEFT, and your LEFT court is on screen RIGHT!
-                        val topTeamState = state.getTeam(topTeamSide)
-                        val isSingles = state.matchType == MatchType.SINGLES
-                        
-                        // In singles, the player is ONLY on their active service or receiving court; the other court is empty!
-                        val topPlayerRight = if (isSingles) {
-                            if (state.serverCourt == CourtSide.RIGHT) topTeamState.player1 else null
-                        } else {
-                            topTeamState.playerAt(CourtSide.RIGHT)
-                        }
-                        val topPlayerLeft = if (isSingles) {
-                            if (state.serverCourt == CourtSide.LEFT) topTeamState.player1 else null
-                        } else {
-                            topTeamState.playerAt(CourtSide.LEFT)
-                        }
-
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .weight(1f)
-                        ) {
-                            // Left & Right court divider
-                            Row(modifier = Modifier.fillMaxSize()) {
-                                // Screen-Left Box = Top Team's RIGHT Service Court (Diagonal to Bottom's Right Court)
-                                CourtBox(
-                                    player = topPlayerRight,
-                                    isServer = isTopServing && topPlayerRight != null && (state.serverPlayer.id == topPlayerRight.id),
-                                    onSelectServer = { topPlayerRight?.let { viewModel.onSetServer(it) } },
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .fillMaxHeight()
-                                        .border(1.dp, courtLineColor)
-                                )
-                                // Screen-Right Box = Top Team's LEFT Service Court (Diagonal to Bottom's Left Court)
-                                CourtBox(
-                                    player = topPlayerLeft,
-                                    isServer = isTopServing && topPlayerLeft != null && (state.serverPlayer.id == topPlayerLeft.id),
-                                    onSelectServer = { topPlayerLeft?.let { viewModel.onSetServer(it) } },
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .fillMaxHeight()
-                                        .border(1.dp, courtLineColor)
-                                )
+                        if (state.isServiceRotationEnabled) {
+                            // Top Half (Top Team - Facing DOWN towards the net)
+                            val topTeamState = state.getTeam(topTeamSide)
+                            val isSingles = state.matchType == MatchType.SINGLES
+                            
+                            val topPlayerRight = if (isSingles) {
+                                if (state.serverCourt == CourtSide.RIGHT) topTeamState.player1 else null
+                            } else {
+                                topTeamState.playerAt(CourtSide.RIGHT)
+                            }
+                            val topPlayerLeft = if (isSingles) {
+                                if (state.serverCourt == CourtSide.LEFT) topTeamState.player1 else null
+                            } else {
+                                topTeamState.playerAt(CourtSide.LEFT)
                             }
 
-                            // Top Swap Position Button (⇄)
-                            if (state.matchType == MatchType.DOUBLES) {
-                                Box(
-                                    modifier = Modifier
-                                        .align(Alignment.TopCenter)
-                                        .offset(y = 12.dp)
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .background(if (isDark) Color(0xFF333842) else Color(0xFFE1F5FE))
-                                        .border(1.dp, if (isDark) Color(0xFF555B68) else Color(0xFF81D4FA), RoundedCornerShape(8.dp))
-                                        .clickable { viewModel.onSwapPositions(topTeamSide) }
-                                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .weight(1f)
+                            ) {
+                                Row(modifier = Modifier.fillMaxSize()) {
+                                    CourtBox(
+                                        player = topPlayerRight,
+                                        isServer = isTopServing && topPlayerRight != null && (state.serverPlayer.id == topPlayerRight.id),
+                                        onSelectServer = { topPlayerRight?.let { viewModel.onSetServer(it) } },
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .fillMaxHeight()
+                                            .border(1.dp, courtLineColor)
+                                    )
+                                    CourtBox(
+                                        player = topPlayerLeft,
+                                        isServer = isTopServing && topPlayerLeft != null && (state.serverPlayer.id == topPlayerLeft.id),
+                                        onSelectServer = { topPlayerLeft?.let { viewModel.onSetServer(it) } },
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .fillMaxHeight()
+                                            .border(1.dp, courtLineColor)
+                                    )
+                                }
+
+                                if (state.matchType == MatchType.DOUBLES) {
+                                    Box(
+                                        modifier = Modifier
+                                            .align(Alignment.TopCenter)
+                                            .offset(y = 12.dp)
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(if (isDark) Color(0xFF333842) else Color(0xFFE1F5FE))
+                                            .border(1.dp, if (isDark) Color(0xFF555B68) else Color(0xFF81D4FA), RoundedCornerShape(8.dp))
+                                            .clickable { viewModel.onSwapPositions(topTeamSide) }
+                                            .padding(horizontal = 10.dp, vertical = 6.dp)
+                                    ) {
+                                        Text(
+                                            text = "⇄",
+                                            color = if (isDark) Color.White else Color(0xFF0277BD),
+                                            fontSize = 16.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
+                            }
+
+                            // The Net
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(3.dp)
+                                    .background(Color.White)
+                            )
+
+                            // Bottom Half (Bottom Team - Facing UP towards the net)
+                            val bottomTeamState = state.getTeam(bottomTeamSide)
+                            val bottomPlayerLeft = if (isSingles) {
+                                if (state.serverCourt == CourtSide.LEFT) bottomTeamState.player1 else null
+                            } else {
+                                bottomTeamState.playerAt(CourtSide.LEFT)
+                            }
+                            val bottomPlayerRight = if (isSingles) {
+                                if (state.serverCourt == CourtSide.RIGHT) bottomTeamState.player1 else null
+                            } else {
+                                bottomTeamState.playerAt(CourtSide.RIGHT)
+                            }
+
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .weight(1f)
+                            ) {
+                                Row(modifier = Modifier.fillMaxSize()) {
+                                    CourtBox(
+                                        player = bottomPlayerLeft,
+                                        isServer = isBottomServing && bottomPlayerLeft != null && (state.serverPlayer.id == bottomPlayerLeft.id),
+                                        onSelectServer = { bottomPlayerLeft?.let { viewModel.onSetServer(it) } },
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .fillMaxHeight()
+                                            .border(1.dp, courtLineColor)
+                                    )
+                                    CourtBox(
+                                        player = bottomPlayerRight,
+                                        isServer = isBottomServing && bottomPlayerRight != null && (state.serverPlayer.id == bottomPlayerRight.id),
+                                        onSelectServer = { bottomPlayerRight?.let { viewModel.onSetServer(it) } },
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .fillMaxHeight()
+                                            .border(1.dp, courtLineColor)
+                                    )
+                                }
+
+                                if (state.matchType == MatchType.DOUBLES) {
+                                    Box(
+                                        modifier = Modifier
+                                            .align(Alignment.BottomCenter)
+                                            .offset(y = (-12).dp)
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(if (isDark) Color(0xFF333842) else Color(0xFFE1F5FE))
+                                            .border(1.dp, if (isDark) Color(0xFF555B68) else Color(0xFF81D4FA), RoundedCornerShape(8.dp))
+                                            .clickable { viewModel.onSwapPositions(bottomTeamSide) }
+                                            .padding(horizontal = 10.dp, vertical = 6.dp)
+                                    ) {
+                                        Text(
+                                            text = "⇄",
+                                            color = if (isDark) Color.White else Color(0xFF0277BD),
+                                            fontSize = 16.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
+                            }
+                        } else {
+                            // No-rotation simplified court: single rectangle with player names vertically
+                            val topTeamState = state.getTeam(topTeamSide)
+                            val bottomTeamState = state.getTeam(bottomTeamSide)
+
+                            // Top Team Rectangle
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .weight(1f)
+                                    .background(if (isTopServing) Color(0x3300E5FF) else Color.Transparent)
+                                    .border(if (isTopServing) BorderStroke(2.5.dp, cyanAccent) else BorderStroke(1.dp, courtLineColor))
+                                    .clickable { if (!isTopServing) viewModel.onToggleServingSide() }
+                                    .padding(8.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
-                                    Text(
-                                        text = "⇄",
-                                        color = if (isDark) Color.White else Color(0xFF0277BD),
-                                        fontSize = 16.sp,
-                                        fontWeight = FontWeight.Bold
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Person,
+                                            contentDescription = null,
+                                            tint = if (isTopServing) cyanAccent else Color.White.copy(alpha = 0.85f),
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                        Text(
+                                            text = topTeamState.player1.name,
+                                            color = Color.White,
+                                            fontSize = 15.sp,
+                                            fontWeight = if (isTopServing) FontWeight.ExtraBold else FontWeight.Bold
+                                        )
+                                    }
+
+                                    if (state.matchType == MatchType.DOUBLES && topTeamState.player2 != null) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Person,
+                                                contentDescription = null,
+                                                tint = if (isTopServing) cyanAccent else Color.White.copy(alpha = 0.85f),
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                            Text(
+                                                text = topTeamState.player2!!.name,
+                                                color = Color.White,
+                                                fontSize = 15.sp,
+                                                fontWeight = if (isTopServing) FontWeight.ExtraBold else FontWeight.Bold
+                                            )
+                                        }
+                                    }
+                                }
+
+                                if (isTopServing) {
+                                    Box(
+                                        modifier = Modifier
+                                            .align(Alignment.BottomEnd)
+                                            .padding(4.dp)
+                                            .size(10.dp)
+                                            .clip(CircleShape)
+                                            .background(cyanAccent)
                                     )
                                 }
                             }
-                        }
 
-                        // The Net (Divider with Net Bar)
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(3.dp)
-                                .background(Color.White)
-                        )
+                            // The Net
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(3.dp)
+                                    .background(Color.White)
+                            )
 
-                        // Bottom Half (Bottom Team - Facing UP towards the net)
-                        // Perspective: When looking up at the net, your LEFT court is on screen LEFT, and your RIGHT court is on screen RIGHT!
-                        val bottomTeamState = state.getTeam(bottomTeamSide)
-                        val bottomPlayerLeft = if (isSingles) {
-                            if (state.serverCourt == CourtSide.LEFT) bottomTeamState.player1 else null
-                        } else {
-                            bottomTeamState.playerAt(CourtSide.LEFT)
-                        }
-                        val bottomPlayerRight = if (isSingles) {
-                            if (state.serverCourt == CourtSide.RIGHT) bottomTeamState.player1 else null
-                        } else {
-                            bottomTeamState.playerAt(CourtSide.RIGHT)
-                        }
-
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .weight(1f)
-                        ) {
-                            Row(modifier = Modifier.fillMaxSize()) {
-                                // Screen-Left Box = Bottom Team's LEFT Service Court (Diagonal to Top's Left Court)
-                                CourtBox(
-                                    player = bottomPlayerLeft,
-                                    isServer = isBottomServing && bottomPlayerLeft != null && (state.serverPlayer.id == bottomPlayerLeft.id),
-                                    onSelectServer = { bottomPlayerLeft?.let { viewModel.onSetServer(it) } },
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .fillMaxHeight()
-                                        .border(1.dp, courtLineColor)
-                                )
-                                // Screen-Right Box = Bottom Team's RIGHT Service Court (Diagonal to Top's Right Court)
-                                CourtBox(
-                                    player = bottomPlayerRight,
-                                    isServer = isBottomServing && bottomPlayerRight != null && (state.serverPlayer.id == bottomPlayerRight.id),
-                                    onSelectServer = { bottomPlayerRight?.let { viewModel.onSetServer(it) } },
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .fillMaxHeight()
-                                        .border(1.dp, courtLineColor)
-                                )
-                            }
-
-                            // Bottom Swap Position Button (⇄)
-                            if (state.matchType == MatchType.DOUBLES) {
-                                Box(
-                                    modifier = Modifier
-                                        .align(Alignment.BottomCenter)
-                                        .offset(y = (-12).dp)
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .background(if (isDark) Color(0xFF333842) else Color(0xFFE1F5FE))
-                                        .border(1.dp, if (isDark) Color(0xFF555B68) else Color(0xFF81D4FA), RoundedCornerShape(8.dp))
-                                        .clickable { viewModel.onSwapPositions(bottomTeamSide) }
-                                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                            // Bottom Team Rectangle
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .weight(1f)
+                                    .background(if (isBottomServing) Color(0x3300E5FF) else Color.Transparent)
+                                    .border(if (isBottomServing) BorderStroke(2.5.dp, cyanAccent) else BorderStroke(1.dp, courtLineColor))
+                                    .clickable { if (!isBottomServing) viewModel.onToggleServingSide() }
+                                    .padding(8.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
-                                    Text(
-                                        text = "⇄",
-                                        color = if (isDark) Color.White else Color(0xFF0277BD),
-                                        fontSize = 16.sp,
-                                        fontWeight = FontWeight.Bold
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Person,
+                                            contentDescription = null,
+                                            tint = if (isBottomServing) cyanAccent else Color.White.copy(alpha = 0.85f),
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                        Text(
+                                            text = bottomTeamState.player1.name,
+                                            color = Color.White,
+                                            fontSize = 15.sp,
+                                            fontWeight = if (isBottomServing) FontWeight.ExtraBold else FontWeight.Bold
+                                        )
+                                    }
+
+                                    if (state.matchType == MatchType.DOUBLES && bottomTeamState.player2 != null) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Person,
+                                                contentDescription = null,
+                                                tint = if (isBottomServing) cyanAccent else Color.White.copy(alpha = 0.85f),
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                            Text(
+                                                text = bottomTeamState.player2!!.name,
+                                                color = Color.White,
+                                                fontSize = 15.sp,
+                                                fontWeight = if (isBottomServing) FontWeight.ExtraBold else FontWeight.Bold
+                                            )
+                                        }
+                                    }
+                                }
+
+                                if (isBottomServing) {
+                                    Box(
+                                        modifier = Modifier
+                                            .align(Alignment.BottomEnd)
+                                            .padding(4.dp)
+                                            .size(10.dp)
+                                            .clip(CircleShape)
+                                            .background(cyanAccent)
                                     )
                                 }
                             }
@@ -532,7 +716,7 @@ fun LiveMatchScreen(
             ) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text(
-                        text = "+1  ${bottomTeamNames.firstOrNull() ?: "Bottom Team"}",
+                        text = "+1  ${bottomTeamNames.joinToString(" and ").ifEmpty { "Bottom Team" }}",
                         color = Color.White,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold

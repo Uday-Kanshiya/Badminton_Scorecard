@@ -1,25 +1,49 @@
-﻿# 🏸 Badminton Scorecard Pro
+# 🏸 Badminton Scorecard Pro v2.0
 
-[![Kotlin](https://img.shields.io/badge/Kotlin-2.0.0-blue.svg?logo=kotlin)](https://kotlinlang.org)
+[![Kotlin](https://img.shields.io/badge/Kotlin-2.0.21-blue.svg?logo=kotlin)](https://kotlinlang.org)
 [![Jetpack Compose](https://img.shields.io/badge/Jetpack%20Compose-Material%203-brightgreen.svg?logo=android)](https://developer.android.com/jetpack/compose)
 [![Platform](https://img.shields.io/badge/Platform-Android%208.0%2B%20(API%2026%2B)-success.svg?logo=android)](https://www.android.com)
 [![Architecture](https://img.shields.io/badge/Architecture-Clean%20MVVM-orange.svg)](https://developer.android.com/topic/architecture)
 [![Database](https://img.shields.io/badge/Database-Room%20SQLite%20%2B%20Flow-red.svg)](https://developer.android.com/training/data-storage/room)
+[![Cloud Sync](https://img.shields.io/badge/Cloud%20Sync-Google%20Play%20%2B%20Firebase-yellow.svg?logo=google)](https://firebase.google.com)
 [![License](https://img.shields.io/badge/License-MIT-lightgrey.svg)](LICENSE)
 
 A modern, tournament-grade digital badminton scorecard and umpire assistant app built with **Jetpack Compose**, **Material 3**, and **Clean MVVM Architecture**. 
 
-Designed for casual players, club tournaments, and professional umpires, featuring official **BWF (Badminton World Federation) rules**, an interactive **court visualizer**, **Text-to-Speech (TTS) voice announcements**, **career analytics graphs**, **high-res image export**, and a **refreshing pastel theme**.
+Designed for casual players, club tournaments, and professional umpires, featuring official **BWF (Badminton World Federation) rules**, an interactive **court visualizer**, **Text-to-Speech (TTS) voice announcements**, **deep doubles player attribution**, **Google Sign-In cloud save**, and **high-res image export**.
 
 ---
 
-## 📥 Download APK
+## 📥 Download APK (v2.0)
 
 You can install the ready-to-use APK directly onto your Android device:
 
-👉 **[Download BadmintonScorecard-v1.2.apk](apk/BadmintonScorecard-v1.2.apk)** *(~25.7 MB)*
+👉 **[Download BadmintonScorecard-v2.0.apk](apk/BadmintonScorecard-v2.0.apk)** *(~27.6 MB)*
 
 > **Installation Tip:** After downloading the .apk on your phone, open it and tap **Install**. If prompted, enable *"Install unknown apps"* for your browser or file manager.
+
+---
+
+## 🚀 What's New in Version 2.0
+
+- ☁️ **Sign in with Google & Cloud Save**:
+  - Official **Google Play Services Auth** integration.
+  - Automatically **caches and restores all previous matches, sets, rally events, player profiles, and career stats** upon sign-in.
+  - Real-time auto-backup whenever a match finishes or player is updated.
+  - Manual **"Sync Now 🔄"** bidirectional sync button.
+- 🏸 **Optional Service Rotation Toggle**:
+  - Ability to disable BWF service rotation prior to starting a match for recreational play.
+  - Live score UI adapts to clean, vertically stacked rectangles and calls out team serves.
+- 👤 **Individual Player Point Attribution in Doubles**:
+  - Optional toggle to track who won the shot/rally in doubles matches.
+  - Live scoreboard shows `+1 Player 1 & Player 2` attribution dialog.
+- 📊 **Doubles Scoring Impact & Teammate Chemistry**:
+  - Dedicated **Doubles Scoring Impact** analytics (Total Doubles Points, Avg Points/Match, Team Share %).
+  - Unified **Best Partners** card with medals (🥇, 🥈, 🥉), win rate progress bar, and pair contribution breakdown (`You: X pts • Partner: Y pts` with dual-color split bar).
+  - Enhanced high-res broadcast sharing card including all doubles metrics.
+- 🎨 **Redesigned Home Screen & Dual-Theme Court Backgrounds**:
+  - Light Mode: sky blue tinted background with badminton court artwork and frosted glass cards.
+  - Dark Mode: deep court background theme with centered headers and zero wasted header space.
 
 ---
 
@@ -122,14 +146,15 @@ graph TD
 
 ## 🛠️ Tech Stack & Libraries
 
-- **Language:** [Kotlin 2.0](https://kotlinlang.org/)
+- **Language:** [Kotlin 2.0.21](https://kotlinlang.org/)
 - **UI Toolkit:** [Jetpack Compose](https://developer.android.com/jetpack/compose) with [Material 3](https://m3.material.io/)
-- **DI:** [Dagger Hilt 2.51](https://dagger.dev/hilt/)
-- **Database:** [Room 2.6](https://developer.android.com/training/data-storage/room) (SQLite + Flow)
+- **DI:** [Dagger Hilt 2.53.1](https://dagger.dev/hilt/)
+- **Database:** [Room 2.6.1](https://developer.android.com/training/data-storage/room) (SQLite + Flow)
+- **Auth & Cloud:** [Google Play Services Auth 21.3.0](https://developers.google.com/android/guides/setup) + [Firebase Firestore](https://firebase.google.com/docs/firestore)
 - **Asynchronous:** [Kotlin Coroutines](https://kotlinlang.org/docs/coroutines-overview.html) & [StateFlow](https://kotlinlang.org/api/kotlinx.coroutines/kotlinx-coroutines-core/kotlinx.coroutines.flow/-state-flow/)
 - **Audio / Speech:** [Android TextToSpeech (TTS)](https://developer.android.com/reference/android/speech/tts/TextToSpeech)
 - **Graphics & Rendering:** Compose Canvas + Android GraphicsLayer bitmap capture
-- **Min SDK:** 26 (Android 8.0 Oreo) • **Target SDK:** 34 (Android 14)
+- **Min SDK:** 26 (Android 8.0 Oreo) • **Target SDK:** 35 (Android 15)
 
 ---
 
@@ -138,33 +163,33 @@ graph TD
 ### Prerequisites
 - Android Studio Ladybug (2024.2+) or newer
 - JDK 17 or JDK 21 (bundled with Android Studio JBR)
-- Android SDK 34
+- Android SDK 35
 
 ### Steps
 1. **Clone the repository:**
-   `ash
+   ```bash
    git clone https://github.com/Uday-Kanshiya/Badminton_Scorecard.git
    cd Badminton_Scorecard
-   `
+   ```
 
 2. **Open in Android Studio** or build directly using the Gradle wrapper:
-   `ash
+   ```bash
    # On Windows PowerShell
    .\gradlew.bat assembleDebug
 
    # On macOS / Linux
    ./gradlew assembleDebug
-   `
+   ```
 
 3. **Locate the APK:**
    The generated APK will be available at:
-   `
+   ```
    app/build/outputs/apk/debug/app-debug.apk
-   `
-   Or inside the repository's pk/ directory:
-   `
-   apk/BadmintonScorecard-v1.2.apk
-   `
+   ```
+   Or inside the repository's `apk/` directory:
+   ```
+   apk/BadmintonScorecard-v2.0.apk
+   ```
 
 ---
 

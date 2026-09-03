@@ -2,6 +2,8 @@ package com.badminton.scorecard.core.database.di
 
 import android.content.Context
 import androidx.room.Room
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import com.badminton.scorecard.core.database.AppDatabase
 import com.badminton.scorecard.core.database.dao.MatchDao
 import com.badminton.scorecard.core.database.dao.PlayerDao
@@ -17,6 +19,15 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {
 
+    private val MIGRATION_1_2 = object : Migration(1, 2) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE matches ADD COLUMN serviceRotationEnabled INTEGER NOT NULL DEFAULT 1")
+            db.execSQL("ALTER TABLE matches ADD COLUMN playerPointAttribution INTEGER NOT NULL DEFAULT 0")
+            db.execSQL("ALTER TABLE match_events ADD COLUMN scoringPlayerId INTEGER DEFAULT NULL")
+            db.execSQL("ALTER TABLE player_stats_cache ADD COLUMN individualPointsScored INTEGER NOT NULL DEFAULT 0")
+        }
+    }
+
     @Provides
     @Singleton
     fun provideAppDatabase(@ApplicationContext context: Context): AppDatabase {
@@ -24,7 +35,7 @@ object DatabaseModule {
             context,
             AppDatabase::class.java,
             "badminton_scorecard.db"
-        ).build()
+        ).addMigrations(MIGRATION_1_2).build()
     }
 
     @Provides

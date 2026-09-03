@@ -108,6 +108,16 @@ class MatchSummaryViewModel @Inject constructor(
             val durationMs = (match.endedAt ?: System.currentTimeMillis()) - match.startedAt
             val durationMins = durationMs / (1000 * 60)
             val matchDuration = "$durationMins min"
+
+            val playerPointBreakdown = mutableMapOf<String, Int>()
+            events.forEach { event ->
+                event.scoringPlayerId?.let { pId ->
+                    val name = allPlayers[pId]?.name
+                    if (name != null) {
+                        playerPointBreakdown[name] = (playerPointBreakdown[name] ?: 0) + 1
+                    }
+                }
+            }
             
             _uiState.update {
                 it.copy(
@@ -128,6 +138,7 @@ class MatchSummaryViewModel @Inject constructor(
                     totalRallies = events.size,
                     matchDuration = matchDuration,
                     durationSeconds = durationMs / 1000,
+                    playerPointBreakdown = playerPointBreakdown,
                     isLoading = false
                 )
             }
@@ -152,6 +163,7 @@ class MatchSummaryViewModel @Inject constructor(
         val totalRallies: Int = 0,
         val matchDuration: String = "",
         val durationSeconds: Long = 0L,
+        val playerPointBreakdown: Map<String, Int> = emptyMap(),
         val isLoading: Boolean = true
     )
 

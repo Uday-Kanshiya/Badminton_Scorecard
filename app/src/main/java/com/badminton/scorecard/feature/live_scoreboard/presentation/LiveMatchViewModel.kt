@@ -12,6 +12,7 @@ import com.badminton.scorecard.core.rules.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
+import com.badminton.scorecard.core.sync.SyncManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -26,6 +27,7 @@ import javax.inject.Inject
 class LiveMatchViewModel @Inject constructor(
     private val matchDao: MatchDao,
     private val playerDao: PlayerDao,
+    private val syncManager: SyncManager,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -92,7 +94,8 @@ class LiveMatchViewModel @Inject constructor(
                 bestOfSets = matchEntity.bestOfSets,
                 teamAPlayers = teamAPlayers.sortedBy { it.id },
                 teamBPlayers = teamBPlayers.sortedBy { it.id },
-                firstServingTeam = firstServingTeam
+                firstServingTeam = firstServingTeam,
+                serviceRotationEnabled = matchEntity.serviceRotationEnabled
             )
 
             // Replay events if any
@@ -108,13 +111,28 @@ class LiveMatchViewModel @Inject constructor(
                     teamAPlayerNames = teamANames,
                     teamBPlayerNames = teamBNames,
                     currentSetId = currentSet.id,
-                    canUndo = rulesEngine.canUndo()
+                    canUndo = rulesEngine.canUndo(),
+                    playerPointAttribution = matchEntity.playerPointAttribution
                 )
             }
         }
     }
 
     fun onTeamScored(team: TeamSide) {
+        val state = _uiState.value
+        val currentState = state.gameState ?: return
+        if (currentState.isMatchOver) return
+
+        // If player point attribution is enabled for doubles, show dialog first
+        if (state.playerPointAttribution && state.matchType == MatchType.DOUBLES) {
+            _uiState.update { it.copy(showScoringPlayerDialog = true, pendingScoringTeam = team) }
+            return
+        }
+
+        recordPoint(team, scoringPlayerId = null)
+    }
+
+    private fun recordPoint(team: TeamSide, scoringPlayerId: Long?) {
         val state = _uiState.value
         val currentState = state.gameState ?: return
         if (currentState.isMatchOver) return
@@ -129,7 +147,8 @@ class LiveMatchViewModel @Inject constructor(
                 servingPlayerId = currentState.serverPlayer.id,
                 serverCourt = currentState.serverCourt.name,
                 teamAScoreAfter = newState.teamA.score,
-                teamBScoreAfter = newState.teamB.score
+                teamBScoreAfter = newState.teamB.score,
+                scoringPlayerId = scoringPlayerId
             )
             matchDao.insertEvent(event)
 
@@ -201,6 +220,11 @@ class LiveMatchViewModel @Inject constructor(
         )
 
         updatePlayerStats(finalState, winnerTeam)
+        try {
+            syncManager.syncMatch(matchId)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     private suspend fun updatePlayerStats(finalState: BadmintonLiveState, winnerTeam: String?) {
@@ -238,6 +262,7 @@ class LiveMatchViewModel @Inject constructor(
                 totalServeRallies = stats.totalServeRallies + serveEvents.size,
                 totalPointsOnReturn = stats.totalPointsOnReturn + pointsOnReturn,
                 totalReturnRallies = stats.totalReturnRallies + opponentServeEvents.size,
+                individualPointsScored = stats.individualPointsScored + matchEvents.count { it.scoringPlayerId == ref.playerId },
                 lastUpdated = System.currentTimeMillis()
             )
             playerDao.insertOrUpdateStats(stats)
@@ -355,5 +380,15 @@ class LiveMatchViewModel @Inject constructor(
 
     fun onEndMatchDismissed() {
         _uiState.update { it.copy(showEndMatchDialog = false) }
+    }
+
+    fun onScoringPlayerSelected(player: PlayerInfo) {
+        val team = _uiState.value.pendingScoringTeam ?: return
+        _uiState.update { it.copy(showScoringPlayerDialog = false, pendingScoringTeam = null) }
+        recordPoint(team, scoringPlayerId = player.id)
+    }
+
+    fun onScoringPlayerDialogDismissed() {
+        _uiState.update { it.copy(showScoringPlayerDialog = false, pendingScoringTeam = null) }
     }
 }
